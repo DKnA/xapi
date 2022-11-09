@@ -1,4 +1,4 @@
-import axios, { AxiosRequestConfig, AxiosPromise } from "axios";
+import axios, { AxiosRequestConfig, AxiosPromise, AxiosInstance } from "axios";
 import { AttachmentUsages, Resources, Verbs, Versions } from "./constants";
 import { parseMultiPart } from "./internal/multiPart";
 import { formatEndpoint } from "./internal/formatEndpoint";
@@ -90,17 +90,23 @@ export default class XAPI {
   public static getTinCanLaunchData = getTinCanLaunchData;
   public static toBasicAuth = toBasicAuth;
 
+  private api: AxiosInstance;
   protected endpoint: string;
   private headers: { [key: string]: string };
 
   public constructor(params: XAPIConfig) {
     const version: Versions = params.version || "1.0.3";
+    this.api = params.axios || axios;
     this.endpoint = formatEndpoint(params.endpoint);
     this.headers = {
       "X-Experience-API-Version": version,
       "Content-Type": "application/json",
       // No Authorization Process and Requirements - https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Communication.md#no-authorization-process-and-requirements
-      Authorization: params.auth ? params.auth : toBasicAuth("", ""),
+      Authorization: params.auth
+        ? params.auth
+        : !params.axios
+        ? toBasicAuth("", "")
+        : undefined,
     };
   }
 
@@ -176,7 +182,7 @@ export default class XAPI {
     url: string,
     requestConfig?: AxiosRequestConfig | undefined
   ): AxiosPromise<any> {
-    return axios
+    return this.api
       .request({
         method: requestConfig?.method || "GET",
         url: url,
